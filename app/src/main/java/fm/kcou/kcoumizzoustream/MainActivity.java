@@ -1,15 +1,22 @@
 package fm.kcou.kcoumizzoustream;
 // Author: Riley Evans, started September 13 2017
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.media.audiofx.Visualizer;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.animation.RotateAnimation;
@@ -18,11 +25,18 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -32,6 +46,8 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import static android.R.attr.data;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -50,6 +66,10 @@ public class MainActivity extends AppCompatActivity {
     protected ImageButton playButton;
     protected TextView status;
     protected TextView streamType;
+    protected TextView silenceWarning;
+    protected Visualizer audioOutput;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +79,7 @@ public class MainActivity extends AppCompatActivity {
         playButton = (ImageButton) findViewById(R.id.playButton);
         status = (TextView) findViewById(R.id.statusTextView);
         streamType = (TextView) findViewById(R.id.streamType);
+        silenceWarning = (TextView) findViewById(R.id.silenceWarning);
         if(!isNetworkAvailable()){
             status.setText(R.string.connection_warning);
             playButton.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_portable_wifi_off_white_24px, null));
@@ -66,6 +87,9 @@ public class MainActivity extends AppCompatActivity {
             status.setText(R.string.startup_message);
         }
         mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+
+
+        ActivityCompat.requestPermissions(this, permissions, REQUEST_RECORD_AUDIO_PERMISSION);
 
 
     }
@@ -159,6 +183,8 @@ public class MainActivity extends AppCompatActivity {
     /////
     private void stopStream(){
         mediaPlayer.stop();
+        audioOutput.setEnabled(false);
+        audioOutput.release();
         playing = 0;
         playButton.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_radio_white_24px, null));
         mediaPlayer.reset();
@@ -190,6 +216,7 @@ public class MainActivity extends AppCompatActivity {
             public void onPrepared(MediaPlayer player){
                 player.start();
                 playing = 1;
+                createVisualizer();
 
                 rotateAnim.cancel();
                 rotateAnim.reset();
@@ -255,7 +282,7 @@ public class MainActivity extends AppCompatActivity {
     private void scheduleSwitchToB() throws ParseException {
         SimpleDateFormat lateFormat = new SimpleDateFormat("HH:mm", Locale.ENGLISH);
         lateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
-        Date late = lateFormat.parse("20:00");
+        Date late = lateFormat.parse("22:00");
         Timer t=new Timer();
         t.schedule(new TimerTask() {
             public void run() {
@@ -272,13 +299,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private int whichStream() throws ParseException {
-//        Date date = new Date();
-//        SimpleDateFormat currentTime = new SimpleDateFormat("HH:mm", Locale.ENGLISH).parse(date);
-//        boolean early = new SimpleDateFormat("HH:mm", Locale.ENGLISH).parse("06:00").after(currentTime);
-//        boolean late  = new SimpleDateFormat("HH:mm", Locale.ENGLISH).parse("20:00").before(currentTime);
         Calendar rightNow = Calendar.getInstance(TimeZone.getTimeZone("America/Chicago"));
         int currentHour = rightNow.get(Calendar.HOUR_OF_DAY);
-        boolean early = currentHour >= 20;
+        boolean early = currentHour >= 22;
         boolean late  = currentHour < 6;
 
         if(early || late){
@@ -287,4 +310,83 @@ public class MainActivity extends AppCompatActivity {
             return 1;
         }
     }
+
+    ///// Listener for silence on stream
+
+    public float intensity = 0;
+    public int silenceCount = 0;
+    public int secondsQuietThreshold = 2*( 3 );
+
+    private void createVisualizer(){
+        int rate = 2000;
+        audioOutput = new Visualizer(mediaPlayer.getAudioSessionId()); // get output audio stream
+        audioOutput.setDataCaptureListener(new Visualizer.OnDataCaptureListener() {
+            @Override
+            public void onWaveFormDataCapture(Visualizer visualizer, byte[] waveform, int samplingRate) {
+                intensity = ((float) waveform[0] + 128f) / 256;
+                Log.d("vis", String.valueOf(intensity));
+                if(intensity<0.05){
+                    silenceCount++;
+                    if(silenceCount>secondsQuietThreshold){
+                        silenceWarning.setText(R.string.silence_warning);
+                        sendSilenceAlert(secondsQuietThreshold/2);
+                    }
+                } else {
+                    silenceCount = 0;
+                    silenceWarning.setText("");
+                }
+            }
+
+            @Override
+            public void onFftDataCapture(Visualizer visualizer, byte[] fft, int samplingRate) {
+
+            }
+        },rate , true, false); // waveform not freq data
+        Log.d("rate", String.valueOf(Visualizer.getMaxCaptureRate()));
+        audioOutput.setEnabled(true);
+    }
+
+    ///// Record Audio Permission Request
+
+    private static final String LOG_TAG = "AudioRecordTest";
+    private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
+    private boolean permissionToRecordAccepted = false;
+    private String [] permissions = {Manifest.permission.RECORD_AUDIO};
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode){
+            case REQUEST_RECORD_AUDIO_PERMISSION:
+                permissionToRecordAccepted  = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                break;
+        }
+        if (!permissionToRecordAccepted ) finish();
+
+    }
+
+    protected void sendSilenceAlert(int seconds){
+        try {
+            URL url = new URL("https://api.groupme.com/v3/bots/post");
+            HttpURLConnection client = (HttpURLConnection) url.openConnection();
+
+            client.setRequestMethod("POST");
+            client.setRequestProperty("bot_id","29652a058532ede37e2779a8be");
+            client.setRequestProperty("text","Stream has been silent for " + seconds + " seconds.");
+            client.setDoOutput(true);
+
+            OutputStream outputPost = new BufferedOutputStream(client.getOutputStream());
+            outputPost.flush();
+            outputPost.close();
+            client.setChunkedStreamingMode(0);
+
+
+            if(client != null)
+                client.disconnect();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
