@@ -14,10 +14,8 @@ import android.view.View;
 import android.view.Window;
 import android.view.animation.RotateAnimation;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import com.squareup.picasso.Picasso;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.io.BufferedReader;
@@ -26,12 +24,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URL;
-import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
+import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -177,12 +175,13 @@ public class MainActivity extends AppCompatActivity {
         try {
             if(x==1){
                 mediaPlayer.setDataSource(stream1);
+                scheduleSwitchToB();
             }
             if(x==2){
                 mediaPlayer.setDataSource(stream2);
+                scheduleSwitchToA();
             }
-            streamType.setText(R.string.stream_b);
-        } catch (IOException e) {
+        } catch (IOException | ParseException e) {
             e.printStackTrace();
         }
 
@@ -235,40 +234,57 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void scheduleSwitchToA() throws ParseException {
+        SimpleDateFormat earlyFormat = new SimpleDateFormat("HH:mm", Locale.ENGLISH);
+        earlyFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+        Date early = earlyFormat.parse("06:00");
         Timer t=new Timer();
         t.schedule(new TimerTask() {
             public void run() {
-                try {
-                    switchStreams(1);
-                    scheduleSwitchToB();
-                } catch (ParseException e) {
-                    e.printStackTrace();
+                if (playing == 1) {
+                    try {
+                        switchStreams(1);
+                        scheduleSwitchToB();
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
-        }, new SimpleDateFormat("HH:mm", Locale.ENGLISH).parse("06:00"));
+        }, early);
     }
 
     private void scheduleSwitchToB() throws ParseException {
+        SimpleDateFormat lateFormat = new SimpleDateFormat("HH:mm", Locale.ENGLISH);
+        lateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+        Date late = lateFormat.parse("20:00");
         Timer t=new Timer();
         t.schedule(new TimerTask() {
             public void run() {
-                try {
-                    switchStreams(2);
-                    scheduleSwitchToA();
-                } catch (ParseException e) {
-                    e.printStackTrace();
+                if(playing==1) {
+                    try {
+                        switchStreams(2);
+                        scheduleSwitchToA();
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
-        }, new SimpleDateFormat("HH:mm", Locale.ENGLISH).parse("20:00"));
+        }, late);
     }
 
     private int whichStream() throws ParseException {
-        boolean early = new SimpleDateFormat("HH:mm", Locale.ENGLISH).parse("06:00").before(new Date());
-        boolean late  = new SimpleDateFormat("HH:mm", Locale.ENGLISH).parse("20:00").after(new Date());
-        if(!early && !late){
-            return 1;
-        } else {
+//        Date date = new Date();
+//        SimpleDateFormat currentTime = new SimpleDateFormat("HH:mm", Locale.ENGLISH).parse(date);
+//        boolean early = new SimpleDateFormat("HH:mm", Locale.ENGLISH).parse("06:00").after(currentTime);
+//        boolean late  = new SimpleDateFormat("HH:mm", Locale.ENGLISH).parse("20:00").before(currentTime);
+        Calendar rightNow = Calendar.getInstance(TimeZone.getTimeZone("America/Chicago"));
+        int currentHour = rightNow.get(Calendar.HOUR_OF_DAY);
+        boolean early = currentHour >= 20;
+        boolean late  = currentHour < 6;
+
+        if(early || late){
             return 2;
+        } else {
+            return 1;
         }
     }
 }
