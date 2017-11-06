@@ -89,7 +89,8 @@
         app:layout_constraintTop_toTopOf="parent"
         android:layout_marginTop="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginBottom="8dp"
+        android:contentDescription="@string/pause_play" />
 
     <TextView
         android:id="@+id/streamType"
@@ -121,7 +122,8 @@
         android:layout_marginBottom="8dp"
         app:layout_constraintBottom_toTopOf="@+id/streamType"
         app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginTop="8dp" />
+        android:layout_marginTop="8dp"
+        android:contentDescription="@string/kcou_logo" />
 
     <TextView
         android:id="@+id/silenceWarning"
@@ -129,7 +131,7 @@
         android:layout_height="wrap_content"
         android:text=""
         android:textAlignment="center"
-        android:textColor="@android:color/background_light"
+        android:textColor="@color/colorAccent"
         android:textSize="30sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"

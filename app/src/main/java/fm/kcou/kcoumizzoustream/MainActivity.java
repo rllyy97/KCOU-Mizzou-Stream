@@ -10,12 +10,11 @@ import android.media.audiofx.Visualizer;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
@@ -23,20 +22,18 @@ import android.view.animation.RotateAnimation;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -46,8 +43,6 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
-
-import static android.R.attr.data;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -187,6 +182,13 @@ public class MainActivity extends AppCompatActivity {
         audioOutput.release();
         playing = 0;
         playButton.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_radio_white_24px, null));
+        streamType.setText("");
+        LinearLayout trackInfo = (LinearLayout) findViewById(R.id.trackInfo);
+        for(int k=0;k<3;k++) {
+            TextView text = (TextView) trackInfo.getChildAt(k);
+            text.setText("");
+        }
+        status.setText(R.string.startup_message);
         mediaPlayer.reset();
     }
 
@@ -254,7 +256,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void switchStreams(int x){
-        if(playing==1){
+        if(playing==1) {
             stopStream();
             startStream(x);
         }
@@ -315,7 +317,7 @@ public class MainActivity extends AppCompatActivity {
 
     public float intensity = 0;
     public int silenceCount = 0;
-    public int secondsQuietThreshold = 2*( 3 );
+    public int secondsQuietThreshold = 2*( 15 );
 
     private void createVisualizer(){
         int rate = 2000;
@@ -348,7 +350,6 @@ public class MainActivity extends AppCompatActivity {
 
     ///// Record Audio Permission Request
 
-    private static final String LOG_TAG = "AudioRecordTest";
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private boolean permissionToRecordAccepted = false;
     private String [] permissions = {Manifest.permission.RECORD_AUDIO};
@@ -362,7 +363,6 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
         if (!permissionToRecordAccepted ) finish();
-
     }
 
     protected void sendSilenceAlert(int seconds){
@@ -379,10 +379,7 @@ public class MainActivity extends AppCompatActivity {
             outputPost.flush();
             outputPost.close();
             client.setChunkedStreamingMode(0);
-
-
-            if(client != null)
-                client.disconnect();
+            client.disconnect();
 
         } catch (IOException e) {
             e.printStackTrace();

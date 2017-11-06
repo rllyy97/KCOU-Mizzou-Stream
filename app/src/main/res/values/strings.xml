@@ -4,6 +4,8 @@
     <string name="connection_warning">Check Internet Connection</string>
     <string name="startup_message">Tap Radio To Play</string>
     <string name="silence_warning">Silence Notified</string>
+    <string name="pause_play">Pause/Play</string>
+    <string name="kcou_logo">KCOU Logo</string>
 
     <string name="stream_a">Stream A</string>
     <string name="stream_b">Stream B</string>
