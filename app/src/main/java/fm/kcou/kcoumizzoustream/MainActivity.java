@@ -264,7 +264,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void scheduleSwitchToA() throws ParseException {
         SimpleDateFormat earlyFormat = new SimpleDateFormat("HH:mm", Locale.ENGLISH);
-        earlyFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+        earlyFormat.setTimeZone(TimeZone.getTimeZone("America/Chicago"));
         Date early = earlyFormat.parse("06:00");
         Timer t=new Timer();
         t.schedule(new TimerTask() {
@@ -283,7 +283,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void scheduleSwitchToB() throws ParseException {
         SimpleDateFormat lateFormat = new SimpleDateFormat("HH:mm", Locale.ENGLISH);
-        lateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+        lateFormat.setTimeZone(TimeZone.getTimeZone("America/Chicago"));
         Date late = lateFormat.parse("22:00");
         Timer t=new Timer();
         t.schedule(new TimerTask() {
