@@ -36,17 +36,14 @@ import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
-import java.util.Locale;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
-//    private static final String TAG = "MyActivity";
+    private static final String TAG = "MyActivity";
 
     String stream1 = "http://radio.kcou.fm:8180/stream";
     String stream1Meta = "http://sc7.shoutcaststreaming.us:2199/recentfeed/c8180/json";
@@ -57,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
 
     MediaPlayer mediaPlayer = new MediaPlayer();
     int playing = 0; // 0=paused, 1=playing 2=connecting
+    int currentStream = 1;
 
     protected ImageButton playButton;
     protected TextView status;
@@ -94,7 +92,8 @@ public class MainActivity extends AppCompatActivity {
             stopStream();
         }
         else if(isNetworkAvailable()&&playing!=2){
-            startStream(whichStream());
+            currentStream=whichStream();
+            startStream();
         }
         else if(!isNetworkAvailable()){
             playButton.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_portable_wifi_off_white_24px, null));
@@ -176,24 +175,28 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /////
+
     private void stopStream(){
         mediaPlayer.stop();
         audioOutput.setEnabled(false);
         audioOutput.release();
         playing = 0;
-        playButton.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_radio_white_24px, null));
-        streamType.setText("");
-        LinearLayout trackInfo = (LinearLayout) findViewById(R.id.trackInfo);
-        for(int k=0;k<3;k++) {
-            TextView text = (TextView) trackInfo.getChildAt(k);
-            text.setText("");
-        }
-        status.setText(R.string.startup_message);
+
+                playButton.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_radio_white_24px, null));
+                streamType.setText("");
+                LinearLayout trackInfo = (LinearLayout) findViewById(R.id.trackInfo);
+                for (int k = 0; k < 3; k++) {
+                    TextView text = (TextView) trackInfo.getChildAt(k);
+                    text.setText("");
+                }
+                status.setText(R.string.startup_message);
+
         mediaPlayer.reset();
     }
 
-    private void startStream(final int x){
+    private void startStream() throws ParseException {
         playing = 2;
+        currentStream=whichStream();
         final RotateAnimation rotateAnim = new RotateAnimation(
                 0, 3240, playButton.getWidth()/2, playButton.getHeight()/2);
         rotateAnim.setDuration(2500);
@@ -201,15 +204,10 @@ public class MainActivity extends AppCompatActivity {
         playButton.startAnimation(rotateAnim);
 
         try {
-            if(x==1){
-                mediaPlayer.setDataSource(stream1);
-                scheduleSwitchToB();
-            }
-            if(x==2){
-                mediaPlayer.setDataSource(stream2);
-                scheduleSwitchToA();
-            }
-        } catch (IOException | ParseException e) {
+            if(currentStream==1) mediaPlayer.setDataSource(stream1);
+            if(currentStream==2) mediaPlayer.setDataSource(stream2);
+
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -223,11 +221,11 @@ public class MainActivity extends AppCompatActivity {
                 rotateAnim.cancel();
                 rotateAnim.reset();
                 playButton.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_pause_white_24px, null));
-                if(x==1){
+                if(currentStream==1){
                     new AsyncMeta().execute(stream1Meta);
                     streamType.setText(R.string.stream_a);
                 }
-                if(x==2){
+                if(currentStream==2){
                     new AsyncMeta().execute(stream2Meta);
                     streamType.setText(R.string.stream_b);
                 }
@@ -239,78 +237,81 @@ public class MainActivity extends AppCompatActivity {
                             status.setText(R.string.connection_warning);
                             t.purge();
                             cancel();
-
                         }
-                        else if(playing!=0) {
-                            if(x==1)new AsyncMeta().execute(stream1Meta);
-                            if(x==2)new AsyncMeta().execute(stream2Meta);
+                        else if(playing==1) {
+                            if(currentStream==1){
+                                try {
+                                    new AsyncMeta().execute(stream1Meta);
+                                    if(whichStream()==2){
+                                        switchStreams();
+                                        t.purge();
+                                        cancel();
+                                    }
+
+                                } catch (ParseException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                            if(currentStream==2){
+                                try {
+                                    new AsyncMeta().execute(stream2Meta);
+                                    if(whichStream()==1){
+                                        switchStreams();
+                                        t.purge();
+                                        cancel();
+                                    }
+                                } catch (ParseException e) {
+                                    e.printStackTrace();
+                                }
+                            }
                         }
                         else {
                             t.purge();
                             cancel();
                         }
                     }
-                }, 0, 60000);
+                }, 0, 15000);
             }
         });
     }
 
-    private void switchStreams(int x){
-        if(playing==1) {
-            stopStream();
-            startStream(x);
+    private void switchStreams() throws ParseException {
+        runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+            try {
+                stopStream();
+                startStream();
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
         }
-    }
-
-    private void scheduleSwitchToA() throws ParseException {
-        SimpleDateFormat earlyFormat = new SimpleDateFormat("HH:mm", Locale.ENGLISH);
-        earlyFormat.setTimeZone(TimeZone.getTimeZone("America/Chicago"));
-        Date early = earlyFormat.parse("06:00");
-        Timer t=new Timer();
-        t.schedule(new TimerTask() {
-            public void run() {
-                if (playing == 1) {
-                    try {
-                        switchStreams(1);
-                        scheduleSwitchToB();
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }, early);
-    }
-
-    private void scheduleSwitchToB() throws ParseException {
-        SimpleDateFormat lateFormat = new SimpleDateFormat("HH:mm", Locale.ENGLISH);
-        lateFormat.setTimeZone(TimeZone.getTimeZone("America/Chicago"));
-        Date late = lateFormat.parse("22:00");
-        Timer t=new Timer();
-        t.schedule(new TimerTask() {
-            public void run() {
-                if(playing==1) {
-                    try {
-                        switchStreams(2);
-                        scheduleSwitchToA();
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }, late);
+        });
     }
 
     private int whichStream() throws ParseException {
-        Calendar rightNow = Calendar.getInstance(TimeZone.getTimeZone("America/Chicago"));
-        int currentHour = rightNow.get(Calendar.HOUR_OF_DAY);
-        boolean early = currentHour >= 22;
-        boolean late  = currentHour < 6;
 
-        if(early || late){
+//        Calendar rightNow = Calendar.getInstance(TimeZone.getTimeZone("America/Chicago"));
+//        int currentHour = rightNow.get(Calendar.HOUR_OF_DAY);
+//        boolean early = currentHour >= 22;
+//        boolean late  = currentHour < 6;
+//
+//        if(early || late){
+//            return 2;
+//        } else {
+//            return 1;
+//        }
+
+        Calendar rightNow = Calendar.getInstance(TimeZone.getTimeZone("America/Chicago"));
+        int currentMin = rightNow.get(Calendar.MINUTE);
+        boolean trigger = currentMin >= 12;
+        Log.d(TAG,String.valueOf(currentMin));
+        if(trigger){
             return 2;
         } else {
             return 1;
         }
+
     }
 
     ///// Listener for silence on stream
@@ -326,7 +327,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onWaveFormDataCapture(Visualizer visualizer, byte[] waveform, int samplingRate) {
                 intensity = ((float) waveform[0] + 128f) / 256;
-                Log.d("vis", String.valueOf(intensity));
                 if(intensity<0.05){
                     silenceCount++;
                     if(silenceCount>secondsQuietThreshold){
@@ -344,7 +344,7 @@ public class MainActivity extends AppCompatActivity {
 
             }
         },rate , true, false); // waveform not freq data
-        Log.d("rate", String.valueOf(Visualizer.getMaxCaptureRate()));
+
         audioOutput.setEnabled(true);
     }
 
