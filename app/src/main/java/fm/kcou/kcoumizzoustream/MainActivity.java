@@ -291,26 +291,26 @@ public class MainActivity extends AppCompatActivity {
 
     private int whichStream() throws ParseException {
 
-//        Calendar rightNow = Calendar.getInstance(TimeZone.getTimeZone("America/Chicago"));
-//        int currentHour = rightNow.get(Calendar.HOUR_OF_DAY);
-//        boolean early = currentHour >= 22;
-//        boolean late  = currentHour < 6;
-//
-//        if(early || late){
-//            return 2;
-//        } else {
-//            return 1;
-//        }
-
         Calendar rightNow = Calendar.getInstance(TimeZone.getTimeZone("America/Chicago"));
-        int currentMin = rightNow.get(Calendar.MINUTE);
-        boolean trigger = currentMin >= 12;
-        Log.d(TAG,String.valueOf(currentMin));
-        if(trigger){
+        int currentHour = rightNow.get(Calendar.HOUR_OF_DAY);
+        boolean early = currentHour >= 22;
+        boolean late  = currentHour < 6;
+
+        if(early || late){
             return 2;
         } else {
             return 1;
         }
+
+//        Calendar rightNow = Calendar.getInstance(TimeZone.getTimeZone("America/Chicago"));
+//        int currentMin = rightNow.get(Calendar.MINUTE);
+//        boolean trigger = currentMin >= 12;
+//        Log.d(TAG,String.valueOf(currentMin));
+//        if(trigger){
+//            return 2;
+//        } else {
+//            return 1;
+//        }
 
     }
 
