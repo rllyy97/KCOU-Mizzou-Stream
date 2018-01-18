@@ -152,11 +152,17 @@ public class MainActivity extends AppCompatActivity {
 
         private void setStreamMeta() throws JSONException, IOException {
             String[] data = new String[3];
-            String fullTitle = jsonMeta.getJSONArray("items").getJSONObject(0).getString("title");
+
+            if(jsonMeta == null)
+                return;
+            if(jsonMeta.getJSONArray("items") == null)
+                return;
+
+            String fullTitle = jsonMeta.getJSONArray("items").getJSONObject(0).getString("title");          // gives null pointer error
             String[] track = fullTitle.split(" - ");
             data[0] = track[1];
             data[1] = track[0];
-            data[2] = jsonMeta.getJSONArray("items").getJSONObject(0).getString("description");
+            data[2] = jsonMeta.getJSONArray("items").getJSONObject(0).getString("description");             // catch this also, same as above
 
             LinearLayout trackInfo = (LinearLayout) findViewById(R.id.trackInfo);
             for(int k=0;k<3;k++) {
@@ -331,7 +337,7 @@ public class MainActivity extends AppCompatActivity {
                     silenceCount++;
                     if(silenceCount>secondsQuietThreshold){
                         silenceWarning.setText(R.string.silence_warning);
-                        sendSilenceAlert(secondsQuietThreshold/2);
+                        new silenceAlert().execute();
                     }
                 } else {
                     silenceCount = 0;
@@ -365,6 +371,27 @@ public class MainActivity extends AppCompatActivity {
         if (!permissionToRecordAccepted ) finish();
     }
 
+    class silenceAlert extends AsyncTask<Void, Void, String> {
+
+        @Override
+        protected void onPreExecute()
+        {
+            super.onPreExecute();
+        }
+        @Override
+        protected String doInBackground(Void... arg0)
+        {
+            sendSilenceAlert(15);
+            return null;
+        }
+        @Override
+        protected void onPostExecute(String result)
+        {
+            super.onPostExecute(result);
+
+        }
+    }
+
     protected void sendSilenceAlert(int seconds){
         try {
             URL url = new URL("https://api.groupme.com/v3/bots/post");
@@ -378,7 +405,6 @@ public class MainActivity extends AppCompatActivity {
             OutputStream outputPost = new BufferedOutputStream(client.getOutputStream());
             outputPost.flush();
             outputPost.close();
-            client.setChunkedStreamingMode(0);
             client.disconnect();
 
         } catch (IOException e) {
