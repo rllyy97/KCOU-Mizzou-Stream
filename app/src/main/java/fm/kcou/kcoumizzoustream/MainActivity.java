@@ -15,7 +15,6 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.animation.RotateAnimation;
@@ -43,7 +42,7 @@ import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "MyActivity";
+//    private static final String TAG = "MyActivity";
 
     String stream1 = "http://radio.kcou.fm:8180/stream";
     String stream1Meta = "http://sc7.shoutcaststreaming.us:2199/recentfeed/c8180/json";
@@ -239,8 +238,13 @@ public class MainActivity extends AppCompatActivity {
                 t.scheduleAtFixedRate(new TimerTask(){
                     public void run() {
                         if(!isNetworkAvailable()){
-                            playButton.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_portable_wifi_off_white_24px, null));
-                            status.setText(R.string.connection_warning);
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    playButton.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_portable_wifi_off_white_24px, null));
+                                    status.setText(R.string.connection_warning);
+                                }
+                            });
                             t.purge();
                             cancel();
                         }
@@ -371,7 +375,7 @@ public class MainActivity extends AppCompatActivity {
         if (!permissionToRecordAccepted ) finish();
     }
 
-    class silenceAlert extends AsyncTask<Void, Void, String> {
+    private class silenceAlert extends AsyncTask<Void, Void, String> {
 
         @Override
         protected void onPreExecute()
