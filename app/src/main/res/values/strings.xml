@@ -2,11 +2,14 @@
     <string name="app_name">KCOU Clean</string>
     <string name="stream_audio">Stream Audio</string>
     <string name="connection_warning">Check Internet Connection</string>
-    <string name="startup_message">Tap Radio To Play</string>
+    <string name="startup_message">Tap To Play</string>
     <string name="silence_warning">Silence Notified</string>
     <string name="pause_play">Pause/Play</string>
     <string name="kcou_logo">KCOU Logo</string>
+    <string name="safe_warning">Safe Harbor Hours. B Stream Only.</string>
 
     <string name="stream_a">Stream A</string>
     <string name="stream_b">Stream B</string>
+    <string name="a">A</string>
+    <string name="b">B</string>
 </resources>

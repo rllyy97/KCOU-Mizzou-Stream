@@ -72,8 +72,7 @@
                 android:trackTint="@color/colorPrimary"
 
                 android:textOff="@string/a"
-                android:textOn="@string/b"
-                tools:targetApi="m" />
+                android:textOn="@string/b" />
 
             <!--<TextView-->
                 <!--android:layout_width="wrap_content"-->
