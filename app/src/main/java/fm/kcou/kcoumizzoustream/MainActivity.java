@@ -38,7 +38,6 @@ public class MainActivity extends AppCompatActivity {
 
     JSONObject jsonMeta;
 
-//    MediaPlayer mediaPlayer = new MediaPlayer();
     StreamService stream;
     int currentStream = 1;
 
@@ -192,23 +191,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startStream() {
-//        playing = 2;
+        // play selected stream
         currentStream=whichStream();
-
-        if(currentStream==1) stream.play(stream1);
-        if(currentStream==2) stream.play(stream2);
-
         if(currentStream==1){
+            stream.play(stream1);
             new AsyncMeta().execute(stream1Meta);
         }
         if(currentStream==2){
+            stream.play(stream2);
             new AsyncMeta().execute(stream2Meta);
         }
 
         final Timer t = new Timer();
         t.scheduleAtFixedRate(new TimerTask(){
             public void run() {
+
+                // network is unavailable, stop stream and put up warning
                 if(!isNetworkAvailable()){
+                    stopStream();
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -219,31 +219,28 @@ public class MainActivity extends AppCompatActivity {
                     t.purge();
                     cancel();
                 }
-                else if(stream.getState()==1) {
-                    if(currentStream==1){
-                        new AsyncMeta().execute(stream1Meta);
-                        if(whichStream()==2){
-                            switchStreams();
-                            t.purge();
-                            cancel();
-                        }
 
-                    }
-                    if(currentStream==2){
-                        new AsyncMeta().execute(stream2Meta);
-                        if(whichStream()==1){
-                            switchStreams();
-                            t.purge();
-                            cancel();
-                        }
+                // if stream is playing
+                else if(stream.getState()==1) {
+                    // if A stream is selected
+                    if(currentStream==1) new AsyncMeta().execute(stream1Meta);
+                    // if B stream is selected
+                    if(currentStream==2) new AsyncMeta().execute(stream2Meta);
+                    // check if stream needs to be switched
+                    if(whichStream()!=currentStream){
+                        switchStreams();
+                        t.purge();
+                        cancel();
                     }
                 }
+
+                // stream has stopped, cancel timer
                 else {
                     t.purge();
                     cancel();
                 }
             }
-        }, 0, 15000);
+        }, 15000, 15000);
 
 //        mediaPlayer.prepareAsync();
 //        mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener(){
@@ -320,12 +317,7 @@ public class MainActivity extends AppCompatActivity {
         boolean early = currentHour >= 22;
         boolean late  = currentHour < 6;
 
-        if(early || late){
-            return false;
-        } else {
-            status.setText("");
-            return true;
-        }
+        return !early && !late;
 
     }
 

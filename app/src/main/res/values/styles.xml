@@ -15,4 +15,9 @@
         <item name="android:windowFullscreen">false</item>
     </style>
 
+    <style name="thumbText">
+        <item name="android:textSize">30sp</item>
+        <item name="android:padding">16dp</item>
+    </style>
+
 </resources>
